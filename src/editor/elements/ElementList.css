@@ -1,0 +1,73 @@
+.element-list { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+
+.element-list-actions {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.element-list-actions button {
+  flex: 1;
+  padding: 4px 6px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 11px;
+  transition: background 0.1s;
+}
+.element-list-actions button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.elem-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.elem-item:hover    { background: var(--bg-hover); }
+.elem-item.selected { background: rgba(124,58,237,0.15); border-color: var(--accent); }
+
+.elem-type {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--accent-light);
+  background: rgba(124,58,237,0.15);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.elem-label {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elem-remove {
+  font-size: 10px;
+  color: var(--danger);
+  opacity: 0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: opacity 0.1s;
+}
+.elem-item:hover .elem-remove { opacity: 0.7; }
+.elem-remove:hover { opacity: 1 !important; background: rgba(239,68,68,0.15); }
+
+.elem-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 16px 8px;
+  line-height: 1.5;
+}

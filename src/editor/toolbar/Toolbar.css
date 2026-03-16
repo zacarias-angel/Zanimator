@@ -1,0 +1,117 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 48px;
+  background: var(--bg-panel-alt);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.toolbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.toolbar-logo {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.toolbar-name {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.toolbar-project-name {
+  max-width: 180px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+/* Target selector */
+.target-selector {
+  display: flex;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.target-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border);
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+
+.target-btn:last-child { border-right: none; }
+.target-btn:hover  { background: var(--bg-hover); color: var(--text-primary); }
+.target-btn.active { background: var(--accent);   color: #fff; }
+
+/* Controles */
+.toolbar-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.ctrl-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ctrl-btn:hover  { background: var(--bg-hover); border-color: var(--accent); }
+.ctrl-btn.active { background: var(--accent);   border-color: var(--accent); }
+
+/* Export */
+.toolbar-actions { margin-left: auto; }
+
+.export-menu-wrap {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-export {
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+  border: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.btn-export:hover          { background: var(--accent-light); }
+.btn-export-zip            { background: #166534; }
+.btn-export-zip:hover      { background: #15803d; }
