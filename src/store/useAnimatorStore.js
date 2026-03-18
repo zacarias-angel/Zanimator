@@ -4,6 +4,7 @@
  * estado de reproducción, elemento seleccionado.
  */
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { player } from '@engine/AnimationPlayer'
 
 // ─── Schema de ejemplo inicial ───────────────────────────
@@ -17,6 +18,7 @@ const INITIAL_SCHEMA = {
       domId: 'elem-1',
       label: 'Caja 1',
       type: 'div',
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
       style: {
         width: 100,
         height: 100,
@@ -58,6 +60,7 @@ const INITIAL_SCHEMA = {
       domId: 'elem-2',
       label: 'Caja 2',
       type: 'div',
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
       style: {
         width: 80,
         height: 80,
@@ -107,7 +110,9 @@ function readFileAsDataUrl(file) {
 }
 
 // ─── Store ───────────────────────────────────────────────
-export const useAnimatorStore = create((set, get) => ({
+export const useAnimatorStore = create(
+persist(
+(set, get) => ({
   // Estado del schema
   schema: INITIAL_SCHEMA,
   assets: [],             // [{ id, name, type, dataUrl }]
@@ -170,6 +175,7 @@ export const useAnimatorStore = create((set, get) => ({
       src:     isImg  ? '' : undefined,
       assetId: isImg  ? null : undefined,
       content: isText ? 'Escribí tu texto aquí' : undefined,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
       style: {
         width:         isImg ? 120 : isText ? 200 : 80,
         height:        isImg ? 120 : isText ? 40  : 80,
@@ -209,6 +215,7 @@ export const useAnimatorStore = create((set, get) => ({
       type: 'img',
       src: asset.dataUrl,
       assetId: asset.id,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
       style: {
         width: 120,
         height: 120,
@@ -249,6 +256,19 @@ export const useAnimatorStore = create((set, get) => ({
     }))
   },
 
+  // Mueve un elemento hacia arriba (-1) o hacia abajo (+1) en el array
+  // El último elemento del array se renderiza encima (mayor z en el DOM)
+  reorderElement(id, dir) {
+    set(s => {
+      const els = [...s.schema.elements]
+      const idx = els.findIndex(e => e.id === id)
+      const next = idx + dir
+      if (next < 0 || next >= els.length) return s
+      ;[els[idx], els[next]] = [els[next], els[idx]]
+      return { schema: { ...s.schema, elements: els } }
+    })
+  },
+
   updateElementStyle(id, styleKey, value) {
     set(s => ({
       schema: {
@@ -258,6 +278,22 @@ export const useAnimatorStore = create((set, get) => ({
         ),
       },
     }))
+  },
+
+  updateElementTransform(id, prop, value) {
+    set(s => ({
+      schema: {
+        ...s.schema,
+        elements: s.schema.elements.map(e =>
+          e.id === id
+            ? { ...e, transform: { ...(e.transform ?? { x:0, y:0, scale:1, rotation:0 }), [prop]: value } }
+            : e
+        ),
+      },
+    }))
+    // Aplica el transform inmediatamente en el DOM sin recargar toda la animación
+    const el = get().schema.elements.find(e => e.id === id)
+    if (el?.domId) player.setBaseTransform(`#${el.domId}`, el.transform ?? {})
   },
 
   updateElementLabel(id, label) {
@@ -333,7 +369,23 @@ export const useAnimatorStore = create((set, get) => ({
 
   // ── Helpers ───────────────────────────────────────────
   getAsset(assetId) { return get().assets.find(a => a.id === assetId) ?? null },
-}))
+}),
+{
+  name: 'zanimator-state',        // clave en localStorage
+  partialize: (s) => ({           // solo persistimos lo que importa
+    schema: s.schema,
+    assets: s.assets,
+  }),
+  onRehydrateStorage: () => (state) => {
+    if (!state) return
+    // Reajusta el contador de IDs para evitar colisiones
+    const ids = state.schema?.elements?.map(e => parseInt(e.id.replace('elem-', '')) || 0) ?? []
+    if (ids.length) _elemCounter = Math.max(...ids, _elemCounter)
+    // Carga el schema restaurado en el player
+    player.load(state.schema)
+  },
+}
+))
 
 // ─── Sincroniza los eventos del player con el store ──────
 player.on('play',     ()      => useAnimatorStore.getState().setPlayerState('playing'))
@@ -344,4 +396,4 @@ player.on('complete', ()      => useAnimatorStore.getState().setPlayerState('sto
 player.on('update',   ({ time }) => useAnimatorStore.getState().setPlayhead(time))
 
 // ─── Carga el schema inicial en el player ────────────────
-player.load(INITIAL_SCHEMA)
+player.load(useAnimatorStore.getState().schema)

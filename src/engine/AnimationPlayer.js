@@ -46,16 +46,35 @@ export class AnimationPlayer extends EventEmitter {
 
   // ── Carga un schema JSON y construye el timeline ──
   load(schema) {
-    this.schema = schema
-
-    // Limpia timeline anterior si existe
+    // 1. Mata el timeline anterior
     if (this.timeline) {
       this.timeline.kill()
       this.timeline = null
     }
 
+    // 2. Limpia solo las propiedades que GSAP maneja (transforms + opacity)
+    //    NUNCA clearProps:'all' — eso borra también width/height/background del elemento
+    ;(schema.elements ?? []).forEach(el => {
+      if (!el.domId) return
+      gsap.set(`#${el.domId}`, {
+        clearProps: 'x,y,rotation,scale,scaleX,scaleY,skewX,skewY,opacity,xPercent,yPercent,transformOrigin',
+      })
+    })
+
+    this.schema   = schema
     this.timeline = this._buildTimeline(schema)
-    this._state   = 'idle'
+
+    // 3. Seek a t=0 para que los tweens que arrancan en t=0 apliquen su 'from'
+    this.timeline.seek(0)
+
+    // 4. Aplica los transforms base DESPUÉS del seek — así son la última instrucción
+    //    y no pueden ser pisados por la inicialización del timeline.
+    //    Para tweens que arrancan en t=0 el valor coincide con el 'from' de la animación.
+    //    Para tweens que arrancan en t>0 esto posiciona el elemento en su estado inicial
+    //    antes de que la animación lo tome.
+    this._applyBaseTransforms(schema)
+
+    this._state = 'idle'
     this.emit('load', { schema })
     return this
   }
@@ -106,6 +125,34 @@ export class AnimationPlayer extends EventEmitter {
     this.timeline.seek(time)
     this.emit('seek', { time })
     return this
+  }
+
+  // Aplica transforms base (x/y/scale/rotation) a un elemento sin recargar el timeline
+  setBaseTransform(target, transform = {}) {
+    gsap.set(target, {
+      x:        transform.x        ?? 0,
+      y:        transform.y        ?? 0,
+      scale:    transform.scale    ?? 1,
+      rotation: transform.rotation ?? 0,
+    })
+    return this
+  }
+
+  // Aplica los transforms base de todos los elementos del schema
+  _applyBaseTransforms(schema) {
+    ;(schema.elements ?? []).forEach(el => {
+      if (!el.domId) return
+      const t = el.transform ?? {}
+      // Solo hace el set si hay algún valor non-default para evitar efectos innecesarios
+      if ((t.x ?? 0) !== 0 || (t.y ?? 0) !== 0 || (t.scale ?? 1) !== 1 || (t.rotation ?? 0) !== 0) {
+        gsap.set(`#${el.domId}`, {
+          x:        t.x        ?? 0,
+          y:        t.y        ?? 0,
+          scale:    t.scale    ?? 1,
+          rotation: t.rotation ?? 0,
+        })
+      }
+    })
   }
 
   // ── Getters de estado ──────────────────────────────

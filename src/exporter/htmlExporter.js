@@ -41,6 +41,7 @@ function styleObjectToCSS(styleObj) {
     overflow:      (v) => `overflow:${v}`,
     display:       (v) => `display:${v}`,
     objectFit:     (v) => `object-fit:${v}`,
+    transformOrigin: (v) => v && v !== '50% 50%' ? `transform-origin:${v}` : '',
   }
   return Object.entries(styleObj)
     .map(([k, v]) => cssProps[k]?.(v) ?? '')
@@ -50,10 +51,20 @@ function styleObjectToCSS(styleObj) {
 
 // â”€â”€â”€ Genera HTML de elementos
 //     imgMap: { domId â†’ src } sobreescribe el src del schema (para export ZIP)
+const TEXT_TYPES = new Set(['p','h1','h2','h3','h4','span','div'])
+
 function buildElementsHTML(elements, imgMap = {}) {
   return elements.map(el => {
-    const styleStr = el.style ? styleObjectToCSS(el.style) : ''
-    const src      = imgMap[el.domId] ?? el.src ?? ''
+    const isText  = TEXT_TYPES.has(el.type)
+    const baseCSS = el.style ? styleObjectToCSS(el.style) : ''
+    // overflow:hidden y white-space:pre-wrap son vitales para respetar
+    // el contenedor y los saltos de linea — estan hardcodeados en Canvas
+    // pero hay que incluirlos explicitamente en el HTML exportado
+    const extraCSS = isText
+      ? 'overflow:hidden;white-space:pre-wrap'
+      : 'overflow:hidden'
+    const styleStr    = baseCSS ? `${baseCSS};${extraCSS}` : extraCSS
+    const src         = imgMap[el.domId] ?? el.src ?? ''
     const textContent = escapeHtml(el.content ?? el.label ?? '')
     const tag = el.type === 'img'
       ? `<img id="${el.domId}" src="${src}" style="${styleStr}" alt="${escapeAttr(el.label ?? '')}" />`
@@ -80,6 +91,7 @@ function buildFontFaceCSS(assets = []) {
 // â”€â”€â”€ Genera el GSAP script del runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildGSAPScript(schema) {
   const elements   = schema.elements ?? []
+  const setLines   = []
   const tweenLines = []
 
   elements.forEach(el => {
@@ -110,7 +122,22 @@ function buildGSAPScript(schema) {
     })
   })
 
-  return tweenLines.join('\n')
+  // gsap.set() va DESPUES de todos los tweens — igual que en AnimationPlayer.js
+  // para no ser pisado por immediateRender de GSAP en tweens a t=0
+  elements.forEach(el => {
+    const target2 = `"#${el.domId}"`
+    const t  = el.transform ?? {}
+    const bx = t.x        ?? 0
+    const by = t.y        ?? 0
+    const bs = t.scale    ?? 1
+    const br = t.rotation ?? 0
+    if (bx !== 0 || by !== 0 || bs !== 1 || br !== 0) {
+      setLines.push(`  gsap.set(${target2}, { x:${bx}, y:${by}, scale:${bs}, rotation:${br} });`)
+    }
+  })
+
+  const allLines = [...tweenLines, ...(setLines.length ? [''] : []), ...setLines]
+  return allLines.join('\n')
 }
 
 // â”€â”€â”€ CSS responsive segÃºn target â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -196,21 +223,21 @@ function buildStageCSS(target) {
     return `
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { overflow: hidden; background: #000; width: 100vw; height: 100vh; }
-    #zanimator-stage { position: relative; width: 100%; height: 100%; }`
+    #zanimator-stage { position: relative; width: 100%; height: 100%; overflow: hidden; }`
   }
 
   if (target === 'mobile') {
     return `
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; }
-    #zanimator-stage { position: relative; width: 390px; height: 550px; transform-origin: center; }`
+    #zanimator-stage { position: relative; width: 390px; height: 550px; overflow: hidden; transform-origin: center; }`
   }
 
   // both â€” responsive auto-scale
   return `
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; }
-    #zanimator-stage { position: relative; width: 600px; height: 340px; transform-origin: center; }`
+    #zanimator-stage { position: relative; width: 600px; height: 340px; overflow: hidden; transform-origin: center; }`
 }
 
 function buildScaleScript(target) {

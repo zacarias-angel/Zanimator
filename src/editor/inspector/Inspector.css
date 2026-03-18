@@ -59,6 +59,16 @@
   border: 1px dashed var(--border);
   border-radius: 5px;
 }
+.inspector-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0 0 6px 0;
+  padding: 6px 8px;
+  background: rgba(124, 58, 237, 0.06);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+}
 .btn-upload-img {
   padding: 5px 10px;
   background: var(--bg-hover);
@@ -128,6 +138,29 @@
 }
 .field-control input[type="color"] { width: 36px; height: 26px; padding: 1px 2px; cursor: pointer; }
 .field-control input[type="checkbox"] { width: auto; height: auto; accent-color: var(--accent); }
+
+/* Pivot grid — selector 3×3 de transformOrigin */
+.pivot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  width: 72px;
+}
+.pivot-btn {
+  aspect-ratio: 1;
+  font-size: 12px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, color 0.1s;
+}
+.pivot-btn:hover  { background: var(--bg-hover); color: var(--text-primary); }
+.pivot-btn.active { background: #fbbf24; border-color: #fbbf24; color: #000; font-weight: 700; }
 
 .mono { font-family: monospace; font-size: 11px; color: var(--accent-light); }
 

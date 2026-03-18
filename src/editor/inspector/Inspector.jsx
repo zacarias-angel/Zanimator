@@ -22,6 +22,7 @@ export default function Inspector() {
   const addAnim         = useAnimatorStore(s => s.addAnimation)
   const removeAnim      = useAnimatorStore(s => s.removeAnimation)
   const updateAnim      = useAnimatorStore(s => s.updateAnimation)
+  const updateTransform = useAnimatorStore(s => s.updateElementTransform)
   const fileInputRef    = useRef(null)
 
   const element = schema.elements.find(e => e.id === selectedId)
@@ -225,6 +226,54 @@ export default function Inspector() {
         <Field label="Opacidad">
           <input type="number" min="0" max="1" step="0.1" value={element.style.opacity ?? 1}
             onChange={e => updateStyle(element.id, 'opacity', Number(e.target.value))} />
+        </Field>
+        <Field label="Z-Index">
+          <input type="number" min="-10" max="999" step="1" value={element.style.zIndex ?? 0}
+            onChange={e => updateStyle(element.id, 'zIndex', Number(e.target.value))} />
+        </Field>
+        <Field label="Pivote">
+          <div className="pivot-grid">
+            {[
+              ['↖','0% 0%'],  ['↑','50% 0%'],  ['↗','100% 0%'],
+              ['←','0% 50%'], ['·','50% 50%'],  ['→','100% 50%'],
+              ['↙','0% 100%'],['↓','50% 100%'], ['↘','100% 100%'],
+            ].map(([icon, val]) => (
+              <button
+                key={val}
+                className={`pivot-btn ${(element.style.transformOrigin ?? '50% 50%') === val ? 'active' : ''}`}
+                onClick={() => updateStyle(element.id, 'transformOrigin', val)}
+                title={val}
+              >{icon}</button>
+            ))}
+          </div>
+        </Field>
+      </Section>
+
+      {/* Transformación base — posición/escala/rotación inicial independiente de animaciones */}
+      <Section title="Transformación">
+        <p className="inspector-hint">
+          Posición inicial del elemento (transform GSAP, independiente del CSS left/top).
+          Las animaciones usan estos valores como punto de partida si no definen un "desde".
+        </p>
+        <Field label="X">
+          <input type="number" step="1"
+            value={element.transform?.x ?? 0}
+            onChange={e => updateTransform(element.id, 'x', Number(e.target.value))} />
+        </Field>
+        <Field label="Y">
+          <input type="number" step="1"
+            value={element.transform?.y ?? 0}
+            onChange={e => updateTransform(element.id, 'y', Number(e.target.value))} />
+        </Field>
+        <Field label="Escala">
+          <input type="number" step="0.05" min="0"
+            value={element.transform?.scale ?? 1}
+            onChange={e => updateTransform(element.id, 'scale', Number(e.target.value))} />
+        </Field>
+        <Field label="Rotación">
+          <input type="number" step="1"
+            value={element.transform?.rotation ?? 0}
+            onChange={e => updateTransform(element.id, 'rotation', Number(e.target.value))} />
         </Field>
       </Section>
 

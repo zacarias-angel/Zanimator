@@ -58,6 +58,11 @@ function ElementList() {
   const selectElement  = useAnimatorStore(s => s.selectElement)
   const addElement     = useAnimatorStore(s => s.addElement)
   const removeElement  = useAnimatorStore(s => s.removeElement)
+  const reorderElement = useAnimatorStore(s => s.reorderElement)
+
+  // Los elementos se muestran al revés: el último del array (renderizado encima) aparece primero
+  const reversed = [...schema.elements].reverse()
+  const total    = schema.elements.length
 
   return (
     <div className="element-list">
@@ -66,21 +71,39 @@ function ElementList() {
         <button onClick={() => addElement('p')}    title="Agregar Texto">+ Texto</button>
         <button onClick={() => addElement('img')}  title="Agregar Imagen">+ Img</button>
       </div>
-      {schema.elements.map(el => (
-        <div
-          key={el.id}
-          className={`elem-item ${el.id === selectedId ? 'selected' : ''}`}
-          onClick={() => selectElement(el.id)}
-        >
-          <span className="elem-type">{el.type}</span>
-          <span className="elem-label">{el.label}</span>
-          <button
-            className="elem-remove"
-            onClick={e => { e.stopPropagation(); removeElement(el.id) }}
-            title="Eliminar"
-          >✕</button>
-        </div>
-      ))}
+      {reversed.map((el, ri) => {
+        const idx = total - 1 - ri   // índice real en el array
+        return (
+          <div
+            key={el.id}
+            className={`elem-item ${el.id === selectedId ? 'selected' : ''}`}
+            onClick={() => selectElement(el.id)}
+          >
+            <span className="elem-type">{el.type}</span>
+            <span className="elem-label">{el.label}</span>
+            {/* Botones de orden — arriba = mayor índice = renderiza encima */}
+            <div className="elem-order" onClick={e => e.stopPropagation()}>
+              <button
+                className="elem-order-btn"
+                onClick={() => reorderElement(el.id, +1)}
+                disabled={idx === total - 1}
+                title="Subir capa"
+              >↑</button>
+              <button
+                className="elem-order-btn"
+                onClick={() => reorderElement(el.id, -1)}
+                disabled={idx === 0}
+                title="Bajar capa"
+              >↓</button>
+            </div>
+            <button
+              className="elem-remove"
+              onClick={e => { e.stopPropagation(); removeElement(el.id) }}
+              title="Eliminar"
+            >✕</button>
+          </div>
+        )
+      })}
       {schema.elements.length === 0 && (
         <p className="elem-empty">No hay elementos. Agregá uno arriba.</p>
       )}

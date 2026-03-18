@@ -29,7 +29,17 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  transition: width 0.3s, height 0.3s;
+  /* sin transition de width/height para que el clip-container sea inmediato */
+  flex-shrink: 0;
+}
+
+/* Contenedor que define las dimensiones visuales reales del stage escalado.
+   overflow:hidden aquí recorta en píxeles de pantalla, no en píxeles DOM. */
+.canvas-clip {
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  flex-shrink: 0;
 }
 
 .canvas-stage.drop-active {
@@ -69,4 +79,45 @@
   border-radius: 4px;
   font-family: monospace;
   font-size: 10px;
+}
+
+/* Badge de zoom cuando el stage está escalado */
+.canvas-zoom {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+/* Indicador de pivote: cruz amarilla sobre el stage */
+.pivot-indicator {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 999;
+}
+.pivot-indicator::before,
+.pivot-indicator::after {
+  content: '';
+  position: absolute;
+  background: #fbbf24;
+  border-radius: 1px;
+}
+/* línea vertical */
+.pivot-indicator::before {
+  width: 1.5px;
+  height: 12px;
+  left: -0.75px;
+  top: -6px;
+}
+/* línea horizontal */
+.pivot-indicator::after {
+  width: 12px;
+  height: 1.5px;
+  left: -6px;
+  top: -0.75px;
 }
