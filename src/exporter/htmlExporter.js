@@ -281,7 +281,17 @@ export function exportHTML(schema, imgMap = {}, assets = []) {
   const stageCSS   = buildStageCSS(target)
   const scaleJS    = buildScaleScript(target)
   const fontCSS    = buildFontFaceCSS(assets)
-  const schemaJSON = JSON.stringify(schema, null, 2)
+
+  // Schema limpio: reemplaza base64 por rutas relativas para no inflar el HTML
+  const cleanSchema = {
+    ...schema,
+    elements: elements.map(el =>
+      (el.type === 'img' && imgMap[el.domId])
+        ? { ...el, src: imgMap[el.domId] }
+        : el
+    ),
+  }
+  const schemaJSON = JSON.stringify(cleanSchema, null, 2)
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -354,7 +364,7 @@ export async function downloadZIP(schema, assets = []) {
       const bytes  = new Uint8Array(binary.length)
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
       imgFolder.file(name, bytes)
-      imgMap[el.domId] = `img/${name}`
+      imgMap[el.domId] = `./img/${name}`
     }
   }
 
@@ -370,7 +380,7 @@ export async function downloadZIP(schema, assets = []) {
       const bytes  = new Uint8Array(binary.length)
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
       fontFolder.file(fname, bytes)
-      return { ...a, dataUrl: `fonts/${fname}` }
+      return { ...a, dataUrl: `./fonts/${fname}` }
     })
   )
 
@@ -389,4 +399,74 @@ export async function downloadZIP(schema, assets = []) {
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function slugify(str) {
   return (str ?? 'animacion').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '').toLowerCase() || 'animacion'
+}
+
+// ─── Importa un ZIP exportado y devuelve { schema, assets } ──
+export async function importZIP(file) {
+  const zip = await JSZip.loadAsync(file)
+
+  // Leer index.html
+  const htmlFile = zip.file('index.html')
+  if (!htmlFile) throw new Error('No se encontró index.html en el ZIP')
+  const html = await htmlFile.async('text')
+
+  // Extraer el JSON del schema embebido
+  const match = html.match(/<script[^>]+id="zanimator-schema"[^>]*>([\s\S]*?)<\/script>/)
+  if (!match) throw new Error('El archivo no contiene un schema Zanimator válido')
+  const schema = JSON.parse(match[1].trim())
+
+  const assets = []
+  const imgMimeByExt = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' }
+
+  // Reconstruir assets de imagen: leer binario desde img/ en el ZIP
+  for (const el of schema.elements ?? []) {
+    if (el.type !== 'img') continue
+    let dataUrl = ''
+    if (el.src?.startsWith('data:')) {
+      // Schema antiguo (base64 inline) — compatibilidad hacia atrás
+      dataUrl = el.src
+    } else if (el.src) {
+      // Schema nuevo (ruta relativa)
+      const relPath = el.src.replace(/^\.\//,  '')
+      const imgFile = zip.file(relPath)
+      if (imgFile) {
+        const ext  = relPath.match(/\.([^.]+)$/)?.[1]?.toLowerCase() ?? 'png'
+        const mime = imgMimeByExt[ext] ?? 'image/png'
+        const b64  = await imgFile.async('base64')
+        dataUrl    = `data:${mime};base64,${b64}`
+        el.src     = dataUrl   // restaurar para el editor
+      }
+    }
+    if (dataUrl) {
+      const mime = dataUrl.match(/data:(.*?);/)?.[1] ?? 'image/png'
+      const ext  = mime.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png'
+      assets.push({
+        id:      el.assetId ?? el.domId,
+        name:    (el.label ?? el.domId) + '.' + ext,
+        type:    mime,
+        dataUrl,
+      })
+    }
+  }
+
+  // Reconstruir assets de fuentes desde la carpeta fonts/ del ZIP
+  const fontMime = { woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/truetype', otf: 'font/otf' }
+  const fontFiles = zip.file(/^fonts\/.+/)
+  for (const fontFile of fontFiles) {
+    const fname      = fontFile.name.replace('fonts/', '')
+    const ext        = fname.match(/\.([^.]+)$/)?.[1]?.toLowerCase() ?? 'woff2'
+    const mime       = fontMime[ext] ?? 'font/woff2'
+    const b64        = await fontFile.async('base64')
+    const dataUrl    = `data:${mime};base64,${b64}`
+    const fontFamily = fname.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ').trim()
+    assets.push({
+      id:         'asset-' + fname,
+      name:       fname,
+      type:       'font',
+      dataUrl,
+      fontFamily,
+    })
+  }
+
+  return { schema, assets }
 }

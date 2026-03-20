@@ -127,6 +127,12 @@ persist(
     player.load(schema)
   },
 
+  // Reemplaza todo el proyecto (schema + assets) — usar al importar un ZIP
+  loadProject(schema, assets) {
+    set({ schema, assets, selectedElementId: null, selectedAnimationIndex: null })
+    player.load(schema)
+  },
+
   updateSchemaName(name) {
     set(s => ({ schema: { ...s.schema, name } }))
   },

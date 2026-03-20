@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useAnimatorStore } from '@store/useAnimatorStore'
-import { downloadHTML, downloadZIP } from '@exporter/htmlExporter'
+import { downloadZIP, importZIP } from '@exporter/htmlExporter'
 import { player } from '@engine/AnimationPlayer'
 import './Toolbar.css'
 
@@ -16,7 +16,9 @@ export default function Toolbar() {
   const updateName  = useAnimatorStore(s => s.updateSchemaName)
   const setTarget   = useAnimatorStore(s => s.setTarget)
   const playerState = useAnimatorStore(s => s.playerState)
+  const loadProject = useAnimatorStore(s => s.loadProject)
   const [exportMenu, setExportMenu] = useState(false)
+  const importInputRef = useRef(null)
 
   const target = schema.target ?? 'desktop'
 
@@ -25,7 +27,17 @@ export default function Toolbar() {
     else player.play()
   }
 
-  const hasImages = assets.length > 0 || schema.elements.some(e => e.type === 'img' && e.src)
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const { schema: importedSchema, assets: importedAssets } = await importZIP(file)
+      loadProject(importedSchema, importedAssets)
+    } catch (err) {
+      alert('No se pudo importar el ZIP: ' + err.message)
+    }
+  }
 
   return (
     <header className="toolbar">
@@ -67,21 +79,30 @@ export default function Toolbar() {
         <button className="ctrl-btn" onClick={() => player.restart()} title="Reiniciar">⏮</button>
       </div>
 
-      {/* Menú de export */}
+      {/* Menú de export / import */}
       <div className="toolbar-actions">
         <div className="export-menu-wrap">
-          <button className="btn-export" onClick={() => downloadHTML(schema, assets)}>
-            ⬇ HTML
+          <button
+            className="btn-export btn-import"
+            onClick={() => importInputRef.current?.click()}
+            title="Abrir un ZIP exportado previamente para modificarlo"
+          >
+            📂 Abrir
           </button>
-          {hasImages && (
-            <button
-              className="btn-export btn-export-zip"
-              onClick={() => downloadZIP(schema, assets)}
-              title="Exportar ZIP con imágenes como archivos separados"
-            >
-              📦 ZIP
-            </button>
-          )}
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".zip"
+            style={{ display: 'none' }}
+            onChange={handleImport}
+          />
+          <button
+            className="btn-export btn-export-zip"
+            onClick={() => downloadZIP(schema, assets)}
+            title="Exportar ZIP con HTML + imágenes en carpeta ./img/"
+          >
+            📦 ZIP
+          </button>
         </div>
       </div>
     </header>
